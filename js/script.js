@@ -405,7 +405,7 @@ async function fetchAPIData(endpoint) {
 
   return data;
 }
-
+g;
 function addCommaToNumber(number) {
   return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
