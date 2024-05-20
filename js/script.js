@@ -1,5 +1,15 @@
 const global = {
   currentPage: window.location.pathname,
+  search: {
+    term: '',
+    type: '',
+    page: 1,
+    totalPages: 1,
+  },
+  api: {
+    apiKey: '967c935dc81716e47682ad65c5f49d3a',
+    apiUrl: 'https://api.themoviedb.org/3/',
+  },
 };
 
 // Display 20 most popular movies currently (according to TMDB)
@@ -326,6 +336,131 @@ function displayBackgroundImage(type, backgroundPath) {
   }
 }
 
+// Search Movies & Shows
+async function search() {
+  const queryString = location.search;
+  const urlParams = new URLSearchParams(queryString);
+  global.search.type = urlParams.get('type');
+  global.search.term = urlParams.get('search-term');
+
+  if (global.search.term !== '' && global.search.term !== null) {
+    const { results, total_pages, page } = await searchAPIData();
+
+    if (results === 0) {
+      showAlert('No results found');
+      return;
+    }
+
+    displaySearchResults(results);
+
+    document.querySelector('#search-term').value = '';
+  } else {
+    showAlert('Please Enter a Search Term');
+  }
+}
+
+function displaySearchResults(results) {
+  results.forEach((result) => {
+    const divCard = document.createElement('div');
+    divCard.classList.add('card');
+
+    const cardTitle = document.createElement('h5');
+    cardTitle.classList.add('card-title');
+    cardTitle.innerText = `${
+      global.search.type === 'movie' ? result.title : result.name
+    }`;
+
+    const cardText = document.createElement('p');
+    cardText.classList.add('card-text');
+    const releaseDate = document.createElement('small');
+    releaseDate.classList.add('text-muted');
+    releaseDate.appendChild(
+      document.createTextNode(
+        `Release: ${
+          global.search.type === 'movie'
+            ? result.release_date
+            : result.first_air_date
+        }`
+      )
+    );
+    cardText.appendChild(releaseDate);
+
+    const link = document.createElement('a');
+    link.setAttribute(
+      'href',
+      `${global.search.type}-details.html?id=${result.id}`
+    );
+
+    const img = document.createElement('img');
+    img.classList.add('card-img-top');
+    img.setAttribute(
+      'alt',
+      `${global.search.type === 'movie' ? result.title : result.name}`
+    );
+    img.setAttribute(
+      'src',
+      `https://image.tmdb.org/t/p/w500/${result.poster_path}`
+    );
+    link.appendChild(img);
+
+    const CardBody = document.createElement('div');
+    CardBody.classList.add('card-body');
+    CardBody.appendChild(cardTitle);
+    CardBody.appendChild(cardText);
+
+    divCard.appendChild(link);
+    divCard.appendChild(CardBody);
+
+    document.getElementById('search-results').appendChild(divCard);
+  });
+}
+
+// Display 20 most popular shows currently (according to TMDB)
+
+async function displayPopularShows() {
+  const { results } = await fetchAPIData('tv/popular');
+
+  results.forEach((show) => {
+    const divCard = document.createElement('div');
+    divCard.classList.add('card');
+
+    const cardTitle = document.createElement('h5');
+    cardTitle.classList.add('card-title');
+    cardTitle.innerText = `${show.name}`;
+
+    const cardText = document.createElement('p');
+    cardText.classList.add('card-text');
+    const releaseDate = document.createElement('small');
+    releaseDate.classList.add('text-muted');
+    releaseDate.appendChild(
+      document.createTextNode(`Air Date: ${show.first_air_date}`)
+    );
+    cardText.appendChild(releaseDate);
+
+    const link = document.createElement('a');
+    link.setAttribute('href', `tv-details.html?id=${show.id}`);
+
+    const img = document.createElement('img');
+    img.classList.add('card-img-top');
+    img.setAttribute('alt', `${show.name}`);
+    img.setAttribute(
+      'src',
+      `https://image.tmdb.org/t/p/w500${show.poster_path}`
+    );
+    link.appendChild(img);
+
+    const CardBody = document.createElement('div');
+    CardBody.classList.add('card-body');
+    CardBody.appendChild(cardTitle);
+    CardBody.appendChild(cardText);
+
+    divCard.appendChild(link);
+    divCard.appendChild(CardBody);
+
+    document.getElementById('popular-shows').appendChild(divCard);
+  });
+}
+
 async function displaySlider() {
   const { results } = await fetchAPIData('movie/now_playing');
 
@@ -391,8 +526,8 @@ function initSwiper() {
 // Fetch data from TMDB API
 
 async function fetchAPIData(endpoint) {
-  const API_KEY = '967c935dc81716e47682ad65c5f49d3a';
-  const API_URL = 'https://api.themoviedb.org/3/';
+  const API_KEY = global.api.apiKey;
+  const API_URL = global.api.apiUrl;
 
   showSpinner();
 
@@ -405,7 +540,36 @@ async function fetchAPIData(endpoint) {
 
   return data;
 }
-g;
+
+// Make Request to Search
+
+async function searchAPIData(endpoint) {
+  const API_KEY = global.api.apiKey;
+  const API_URL = global.api.apiUrl;
+
+  showSpinner();
+
+  const response = await fetch(
+    `${API_URL}search/${global.search.type}?api_key=${API_KEY}&language=en-us&query=${global.search.term}`
+  );
+  const data = await response.json();
+
+  hideSpinner();
+
+  return data;
+}
+
+// show Alert
+
+function showAlert(message, className = 'error') {
+  const alertElement = document.createElement('div');
+  alertElement.classList.add('alert', className);
+  alertElement.appendChild(document.createTextNode(message));
+  document.querySelector('#alert').appendChild(alertElement);
+
+  setTimeout(() => alertElement.remove(), 3000);
+}
+
 function addCommaToNumber(number) {
   return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
@@ -438,7 +602,7 @@ function init() {
       displayShowDetails();
       break;
     case '/search.html':
-      console.log('Search');
+      search();
       break;
   }
 
