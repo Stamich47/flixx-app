@@ -64,6 +64,7 @@ async function displayPopularShows() {
   const { results } = await fetchAPIData('tv/popular');
 
   results.forEach((show) => {
+    Shows;
     const divCard = document.createElement('div');
     divCard.classList.add('card');
 
@@ -570,9 +571,45 @@ async function displaySlider() {
     div.appendChild(headerSwiper);
 
     document.querySelector('.swiper-wrapper').appendChild(div);
-
-    initSwiper();
   });
+
+  initSwiper();
+}
+
+async function displaySliderTV() {
+  const { results } = await fetchAPIData('tv/airing_today');
+
+  results.forEach((show) => {
+    const div = document.createElement('div');
+    div.classList.add('swiper-slide');
+
+    const a = document.createElement('a');
+    a.setAttribute('href', `tv-details.html?id=${show.id}`);
+    const img = document.createElement('img');
+    img.setAttribute(
+      'src',
+      `https://image.tmdb.org/t/p/w500${show.poster_path}`
+    );
+    img.setAttribute('alt', `${show.name}`);
+    a.appendChild(img);
+
+    const headerSwiper = document.createElement('h4');
+    headerSwiper.classList.add('swiper-rating');
+    const icon = document.createElement('i');
+    icon.classList.add('fas', 'fa-star', 'text-secondary');
+    const ratingText = document.createTextNode(
+      ` ${show.vote_average.toFixed(1)} / 10`
+    );
+    headerSwiper.appendChild(icon);
+    headerSwiper.appendChild(ratingText);
+
+    div.appendChild(a);
+    div.appendChild(headerSwiper);
+
+    console.log(document.querySelector('.swiper-wrapper').appendChild(div));
+  });
+
+  initSwiper();
 }
 
 // Swiper Initialize
@@ -672,6 +709,7 @@ function init() {
       break;
     case '/shows.html':
       displayPopularShows();
+      displaySliderTV();
       break;
     case '/movie-details.html':
       displayMovieDetails();
