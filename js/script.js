@@ -5,6 +5,7 @@ const global = {
     type: '',
     page: 1,
     totalPages: 1,
+    totalResults: 0,
   },
   api: {
     apiKey: '967c935dc81716e47682ad65c5f49d3a',
@@ -344,9 +345,13 @@ async function search() {
   global.search.term = urlParams.get('search-term');
 
   if (global.search.term !== '' && global.search.term !== null) {
-    const { results, total_pages, page } = await searchAPIData();
+    const { results, total_pages, page, total_results } = await searchAPIData();
 
-    if (results === 0) {
+    global.search.page = page;
+    global.search.totalPages = total_pages;
+    global.search.totalResults = total_results;
+
+    if (results.length === 0) {
       showAlert('No results found');
       return;
     }
@@ -360,6 +365,11 @@ async function search() {
 }
 
 function displaySearchResults(results) {
+  // Clear Previous Results
+  document.querySelector('#search-results').innerHTML = '';
+  document.querySelector('#search-results-heading').innerHTML = '';
+  document.querySelector('#pagination').innerHTML = '';
+
   results.forEach((result) => {
     const divCard = document.createElement('div');
     divCard.classList.add('card');
@@ -397,10 +407,14 @@ function displaySearchResults(results) {
       'alt',
       `${global.search.type === 'movie' ? result.title : result.name}`
     );
-    img.setAttribute(
-      'src',
-      `https://image.tmdb.org/t/p/w500/${result.poster_path}`
-    );
+    if (result.poster_path === null) {
+      img.setAttribute('src', `./images/no-image.jpg`);
+    } else {
+      img.setAttribute(
+        'src',
+        `https://image.tmdb.org/t/p/w500${result.poster_path}`
+      );
+    }
     link.appendChild(img);
 
     const CardBody = document.createElement('div');
@@ -412,6 +426,70 @@ function displaySearchResults(results) {
     divCard.appendChild(CardBody);
 
     document.getElementById('search-results').appendChild(divCard);
+  });
+
+  const numberOfResults = document.createElement('h2');
+  numberOfResults.innerText = `${results.length} of ${global.search.totalResults} for ${global.search.term} `;
+  document
+    .querySelector('#search-results-heading')
+    .appendChild(numberOfResults);
+
+  displayPagination();
+}
+
+// Display pagination for search results
+
+function displayPagination() {
+  const div = document.createElement('div');
+  div.classList.add('pagination');
+
+  const buttonPrev = document.createElement('button');
+  buttonPrev.classList.add('btn', 'btn-primary');
+  buttonPrev.setAttribute('id', 'prev');
+  buttonPrev.innerText = 'Prev';
+
+  const buttonNext = document.createElement('button');
+  buttonNext.classList.add('btn', 'btn-primary');
+  buttonNext.setAttribute('id', 'next');
+  buttonNext.innerText = 'Next';
+
+  const counter = document.createElement('div');
+  counter.classList.add('page-counter');
+  counter.innerText = `Page ${global.search.page} of ${global.search.totalPages}`;
+
+  div.appendChild(buttonPrev);
+  div.appendChild(buttonNext);
+  div.appendChild(counter);
+  document.getElementById('pagination').appendChild(div);
+
+  // Disable buttons depending on pagination type
+  if (
+    global.search.page === 1 &&
+    global.search.totalPages > global.search.page
+  ) {
+    document.querySelector('#prev').disabled = true;
+  } else if (
+    global.search.page === global.search.totalPages &&
+    global.search.page > 1
+  ) {
+    document.querySelector('#next').disabled = true;
+  } else if (global.search.totalPages === 1) {
+    document.querySelector('#prev').disabled = true;
+    document.querySelector('#next').disabled = true;
+  }
+
+  // Go to Next Page & Previous Page
+
+  document.querySelector('#next').addEventListener('click', async () => {
+    global.search.page++;
+    const { results, total_pages } = await searchAPIData();
+    displaySearchResults(results);
+  });
+
+  document.querySelector('#prev').addEventListener('click', async () => {
+    global.search.page--;
+    const { results, total_pages } = await searchAPIData();
+    displaySearchResults(results);
   });
 }
 
@@ -550,7 +628,7 @@ async function searchAPIData(endpoint) {
   showSpinner();
 
   const response = await fetch(
-    `${API_URL}search/${global.search.type}?api_key=${API_KEY}&language=en-us&query=${global.search.term}`
+    `${API_URL}search/${global.search.type}?api_key=${API_KEY}&language=en-us&query=${global.search.term}&page=${global.search.page}`
   );
   const data = await response.json();
 
